@@ -219,7 +219,7 @@ version: '3.8'
 
 services:
   caddy:
-    image: yourusername/caddy:latest
+    image: need4swede/caddy:latest
     restart: unless-stopped
 
     cap_add:
@@ -244,15 +244,20 @@ services:
       - PORKBUN_SECRET_KEY=${PORKBUN_SECRET_KEY}
 
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./sites:/srv:ro
-      - ./logs:/var/log/caddy
-      - caddy_data:/data
-      - caddy_config:/config
+      # Configuration
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
 
-volumes:
-  caddy_data:
-  caddy_config:
+      # Website content
+      - ./sites:/srv:ro
+
+      # Logs (writable)
+      - ./logs:/var/log/caddy:rw
+
+      # Caddy data (certificates, etc.)
+      - ./data:/data:rw
+
+      # Caddy config (internal state)
+      - ./caddy-config:/config:rw
 ```
 
 ### Caddyfile Examples
