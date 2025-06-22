@@ -219,8 +219,12 @@ version: '3.8'
 
 services:
   caddy:
-    image: need4swede/caddy:latest
+    container_name: caddy
+    image: yourusername/caddy:latest
     restart: unless-stopped
+
+    # User directive goes here at service level, not in environment
+    user: "${UID:-1000}:${GID:-1000}"
 
     cap_add:
       - NET_ADMIN
@@ -231,9 +235,7 @@ services:
       - "443:443/udp"
 
     environment:
-      # Setup user and group permissions
-      user: "${UID:-1000}:${GID:-1000}"
-
+      # Only environment variables go here
       # Cloudflare credentials
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
 
