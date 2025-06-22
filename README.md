@@ -231,6 +231,9 @@ services:
       - "443:443/udp"
 
     environment:
+      # Setup user and group permissions
+      user: "${UID:-1000}:${GID:-1000}"
+
       # Cloudflare credentials
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
 
