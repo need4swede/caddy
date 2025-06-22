@@ -265,85 +265,37 @@ services:
       - ./caddy-config:/config:rw
 ```
 
-### Caddyfile Examples
-
-#### Using Cloudflare DNS Challenge
+#### Caddyfile Example
 
 ```caddyfile
 {
-    # Global DNS provider (applies to all sites)
-    dns cloudflare {
-        api_token {env.CLOUDFLARE_API_TOKEN}
+    # Global configuration
+    admin off
+}
+
+# Reusable logging snippet
+(logging) {
+    log {
+    output file /var/log/caddy/access.log {
+        roll_size 10MB
+        roll_keep 5
+    }
+    format json
+    level INFO
     }
 }
 
-example.com {
-    # Automatic HTTPS with DNS challenge
-    file_server
-}
-
-*.example.com {
-    # Wildcard certificate
-    file_server
-}
-```
-
-#### Using Namecheap DNS Challenge
-
-```caddyfile
-{
-    # Global DNS provider (applies to all sites)
-    dns namecheap {
-        api_key {env.NAMECHEAP_API_KEY}
-        user {env.NAMECHEAP_API_USER}
-        client_ip {env.NAMECHEAP_CLIENT_IP}
-        api_endpoint https://api.namecheap.com/xml.response
+(security_headers) {
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
     }
 }
 
-example.com {
-    # Automatic HTTPS with DNS challenge
-    file_server
-}
-
-*.example.com {
-    # Wildcard certificate
-    file_server
-}
-```
-
-#### Using Porkbun DNS Challenge
-
-```caddyfile
-{
-    # Global DNS provider for Porkbun
-    dns porkbun {
-        api_key {env.PORKBUN_API_KEY}
-        api_secret_key {env.PORKBUN_SECRET_KEY}
-    }
-}
-
-porkbun-domain.com {
-    file_server
-}
-```
-
-#### Mixed Providers (Per-Site Configuration)
-
-```caddyfile
-# Cloudflare domain
-cloudflare-domain.com {
-    tls {
-        dns cloudflare {
-            api_token {env.CLOUDFLARE_API_TOKEN}
-        }
-        resolvers 1.1.1.1 1.0.0.1
-    }
-    file_server
-}
-
-# Namecheap domain
-namecheap-domain.com {
+(namecheap_ssl) {
     tls {
         dns namecheap {
             api_key {env.NAMECHEAP_API_KEY}
@@ -353,11 +305,9 @@ namecheap-domain.com {
         }
         resolvers 1.1.1.1 1.0.0.1
     }
-    file_server
 }
 
-# Porkbun domain
-porkbun-domain.com {
+(porkbun_ssl) {
     tls {
         dns porkbun {
             api_key {env.PORKBUN_API_KEY}
@@ -365,7 +315,30 @@ porkbun-domain.com {
         }
         resolvers 1.1.1.1 1.0.0.1
     }
-    file_server
+}
+
+# Catch-all for undefined sites
+* {
+    import logging
+    respond "YOU SHALL NOT PASS!" 403
+}
+
+# Wildcard domain configuration
+*.domain.net {
+    import logging
+    import security_headers
+    import namecheap_ssl
+    import porkbun_ssl
+
+    @app host app.domain.net
+    handle @app {
+        reverse_proxy 192.168.0.1:1234
+    }
+
+    # Handle other subdomains
+    handle {
+        respond "Not all who wander are lost" 404
+    }
 }
 ```
 
