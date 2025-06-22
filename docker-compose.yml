@@ -1,0 +1,156 @@
+services:
+  # Init container to set up files
+  caddy-init:
+    image: alpine:latest
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/setup
+    command:
+      - sh
+      - -c
+      - |
+        echo "Setting up Caddy configuration..."
+
+        # Create directories
+        mkdir -p /setup/config /setup/sites /setup/logs /setup/data
+
+        # Create default Caddyfile if it does not exist
+        if [ ! -f /setup/Caddyfile ]; then
+          echo "Creating default Caddyfile..."
+          cat > /setup/Caddyfile << 'EOF'
+          {
+            # Global configuration
+            admin off
+          }
+
+          # Reusable logging snippet
+          (logging) {
+            log {
+            output file /var/log/caddy/access.log {
+              roll_size 10MB
+              roll_keep 5
+            }
+            format json
+            level INFO
+            }
+          }
+
+          (security_headers) {
+            header {
+              X-Content-Type-Options nosniff
+              X-Frame-Options DENY
+              X-XSS-Protection "1; mode=block"
+              Referrer-Policy strict-origin-when-cross-origin
+              Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            }
+          }
+
+          (namecheap_ssl) {
+            tls {
+              dns namecheap {
+                api_key {env.NAMECHEAP_API_KEY}
+                user {env.NAMECHEAP_API_USER}
+                client_ip {env.NAMECHEAP_CLIENT_IP}
+                api_endpoint https://api.namecheap.com/xml.response
+              }
+              resolvers 1.1.1.1 1.0.0.1
+            }
+          }
+
+          (porkbun_ssl) {
+            tls {
+              dns porkbun {
+                api_key {env.PORKBUN_API_KEY}
+                api_secret_key {env.PORKBUN_SECRET_KEY}
+              }
+              resolvers 1.1.1.1 1.0.0.1
+            }
+          }
+
+          # Catch-all for undefined sites
+          * {
+            import logging
+            respond "YOU SHALL NOT PASS!" 403
+          }
+
+          # Wildcard domain configuration
+          *.domain.net {
+            import logging
+            import security_headers
+            import namecheap_ssl
+            import porkbun_ssl
+
+            @app host app.domain.net
+            handle @app {
+              reverse_proxy 192.168.0.1:1234
+            }
+
+            # Handle other subdomains
+            handle {
+              respond "Not all who wander are lost" 404
+            }
+          }
+        EOF
+          echo "✅ Created default Caddyfile"
+        else
+          echo "ℹ️  Caddyfile already exists"
+        fi
+
+        # Set permissions
+        chmod -R 755 /setup/config /setup/sites /setup/logs /setup/data
+        echo "✅ Setup complete!"
+    restart: "no"
+  # Main Caddy service
+  caddy:
+    image: yourusername/caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+
+    depends_on:
+      caddy-init:
+        condition: service_completed_successfully
+
+    cap_add:
+      - NET_ADMIN
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+
+    environment:
+      # Cloudflare credentials
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+
+      # Namecheap credentials
+      - NAMECHEAP_API_KEY=${NAMECHEAP_API_KEY}
+      - NAMECHEAP_API_USER=${NAMECHEAP_API_USER}
+      - NAMECHEAP_CLIENT_IP=${NAMECHEAP_CLIENT_IP}
+
+      # Porkbun credentials
+      - PORKBUN_API_KEY=${PORKBUN_API_KEY}
+      - PORKBUN_SECRET_KEY=${PORKBUN_SECRET_KEY}
+
+    volumes:
+      # Configuration - now mounted from root
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+      # Website content
+      - ./sites:/srv:ro
+
+      # Logs (writable)
+      - ./logs:/var/log/caddy:rw
+
+      # Caddy data (certificates, etc.)
+      - ./data:/data:rw
+
+      # Caddy config (internal state) - renamed from caddy-config to config
+      - ./config:/config:rw
+
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
