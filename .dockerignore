@@ -1,0 +1,20 @@
+# Git
+.git
+.gitignore
+README.md
+LICENSE
+
+# Development files
+.env
+.env.*
+*.log
+compose.yaml
+docker-compose.yml
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Documentation
+docs/
+examples/
