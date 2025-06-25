@@ -16,16 +16,16 @@ FROM caddy:2.9.1
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
 # Metadata
-LABEL maintainer="root@n4s.dev" \
-    description="Caddy v2.9.1 with Cloudflare, Porkbun, and Namecheap" \
+LABEL maintainer="yourusername@email.com" \
+    description="Caddy v2.9.1 with Cloudflare, Porkbun, Namecheap and Maxmind Geo-Filtering" \
     version="2.9.1" \
     org.opencontainers.image.title="caddy" \
-    org.opencontainers.image.description="Caddy web server with Cloudflare, Porkbun, and a working Namecheap DNS challenge plugin" \
-    org.opencontainers.image.url="https://hub.docker.com/r/need4swede/caddy" \
-    org.opencontainers.image.source="https://github.com/need4swede/caddy" \
+    org.opencontainers.image.description="Caddy v2.9.1 with Cloudflare, Porkbun, Namecheap and Maxmind Geo-Filtering" \
+    org.opencontainers.image.url="https://hub.docker.com/r/yourusername/caddy" \
+    org.opencontainers.image.source="https://github.com/yourusername/caddy" \
     org.opencontainers.image.licenses="Apache-2.0" \
-    org.opencontainers.image.vendor="need4swede" \
-    org.opencontainers.image.authors="root@n4s.dev"
+    org.opencontainers.image.vendor="yourusername" \
+    org.opencontainers.image.authors="yourusername@email.com"
 
 # Verify that all your specified modules are loaded successfully
 RUN caddy list-modules --versions
