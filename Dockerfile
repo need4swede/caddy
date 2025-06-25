@@ -6,7 +6,8 @@ FROM caddy:2.10-builder AS builder
 RUN xcaddy build v2.9.1 \
     --with github.com/caddy-dns/namecheap \
     --with github.com/caddy-dns/porkbun@v0.2.1 \
-    --with github.com/caddy-dns/cloudflare@7b8ded4
+    --with github.com/caddy-dns/cloudflare@7b8ded4 \
+    --with github.com/porech/caddy-maxmind-geolocation
 
 # Final, clean image based on the required Caddy version (2.9.1).
 FROM caddy:2.9.1
